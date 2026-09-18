@@ -1,7 +1,7 @@
 import os
 from typing import Optional
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
@@ -95,14 +95,29 @@ def research(data: RequestData):
     key = os.getenv("OPENAI_API_KEY")
     if not key:
         return {"error": "OPENAI_API_KEY is not set."}
-    client = OpenAI(api_key=key)
-    r = client.responses.create(
-        model=os.getenv("OPENAI_MODEL", "gpt-5.6-luna"),
-        tools=[{"type": "web_search"}],
-        instructions=SYSTEM,
-        input=prompt(data),
-    )
-    return {"report": r.output_text}
+    try:
+        client = OpenAI(api_key=key)
+        r = client.responses.create(
+            model=os.getenv("OPENAI_MODEL", "gpt-5.6-luna"),
+            tools=[{"type": "web_search"}],
+            instructions=SYSTEM,
+            input=prompt(data),
+        )
+
+        report = r.output_text
+        if not report:
+            return JSONResponse(
+                status_code=502,
+                content={"error": "OpenAI returned no text output."}
+            )
+
+        return {"report": report}
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=502,
+            content={"error": f"{type(e).__name__}: {str(e)}"}
+        )
 
 if __name__ == "__main__":
     import uvicorn

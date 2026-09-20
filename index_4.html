@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ScholarTrack — Your AI Financial-Aid Advisor</title>
+<style>
+:root{
+  --ink:#0f172a; --soft:#475569; --faint:#94a3b8;
+  --line:#e2e8f0; --bg:#f1f5f9; --card:#fff;
+  --brand:#1e3a8a; --brand-2:#2563eb; --brand-soft:#eef2ff;
+  --ok:#047857; --ok-bg:#ecfdf5; --ok-line:#a7f3d0;
+  --warn:#b45309; --warn-bg:#fffbeb; --warn-line:#fde68a;
+  --grey:#475569; --grey-bg:#f1f5f9; --grey-line:#cbd5e1;
+  --red:#b91c1c; --red-bg:#fef2f2; --red-line:#fecaca;
+  --r:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.6;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px 70px}
+
+header{background:var(--brand);color:#fff;padding:26px 0 22px;margin-bottom:24px}
+header .wrap{padding-bottom:0}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:38px;height:38px;border-radius:10px;background:#fff;color:var(--brand);
+  display:grid;place-items:center;font-weight:800;font-size:19px;flex:none}
+h1{margin:0;font-size:25px;letter-spacing:-.4px}
+.tagline{margin:5px 0 0;color:#c7d2fe;font-size:14.5px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  padding:24px;margin-bottom:20px}
+.card h2{margin:0 0 4px;font-size:17px}
+.card .hint{margin:0 0 18px;color:var(--soft);font-size:14px}
+
+.modes{display:flex;gap:8px;flex-wrap:wrap}
+.mode{background:#f8fafc;color:var(--soft);border:1px solid var(--line);
+  padding:9px 14px;border-radius:999px;cursor:pointer;font-weight:600;
+  font-size:13.5px;font-family:inherit;transition:.15s}
+.mode:hover{border-color:#cbd5e1;color:var(--ink)}
+.mode.active{background:var(--brand);border-color:var(--brand);color:#fff}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.full{grid-column:1/-1}
+label{display:block;font-size:12.5px;font-weight:700;color:var(--soft);
+  text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.optional{color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0}
+input,select,textarea{width:100%;padding:11px 13px;border:1px solid var(--line);
+  border-radius:9px;font-size:14.5px;font-family:inherit;color:var(--ink);background:#fff;transition:.15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand);
+  box-shadow:0 0 0 3px var(--brand-soft)}
+textarea{resize:vertical}
+
+.actions{display:flex;align-items:center;gap:14px;margin-top:20px;flex-wrap:wrap}
+button.go{background:var(--brand);color:#fff;border:0;border-radius:9px;padding:13px 26px;
+  font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;transition:.15s}
+button.go:hover:not(:disabled){background:#1e40af}
+button.go:disabled{background:#94a3b8;cursor:not-allowed}
+.loading{display:none;align-items:center;gap:11px}
+.loading.on{display:flex}
+.spinner{width:17px;height:17px;flex:none;border:2.5px solid var(--line);
+  border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#statusText{color:var(--soft);font-size:14px}
+.timer{color:var(--faint);font-variant-numeric:tabular-nums;font-size:13px}
+
+/* banners */
+.banner{border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:14px;border:1px solid}
+.banner strong{display:block;margin-bottom:3px;font-size:14.5px}
+.banner.verified{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
+.banner.limited{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.banner.error{background:var(--red-bg);border-color:var(--red-line);color:var(--red)}
+
+/* stat tiles */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
+.stat{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.stat .n{font-size:26px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
+.stat .l{font-size:12px;color:var(--soft);text-transform:uppercase;letter-spacing:.4px;font-weight:600}
+
+.summary{background:var(--brand-soft);border:1px solid #c7d2fe;border-radius:10px;
+  padding:15px 17px;margin-bottom:24px;font-size:15px}
+
+.section{margin-bottom:30px}
+.section > h3{font-size:15px;text-transform:uppercase;letter-spacing:.6px;color:var(--soft);
+  margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+
+/* opportunity cards */
+.opp{border:1px solid var(--line);border-left:4px solid var(--grey-line);
+  border-radius:10px;padding:17px 19px;margin-bottom:12px;background:#fff}
+.opp.confirmed{border-left-color:var(--ok)}
+.opp.potential{border-left-color:var(--warn)}
+.opp.unverified{border-left-color:var(--grey-line)}
+.opp-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.opp-name{font-weight:700;font-size:16px;margin:0}
+.opp-provider{color:var(--soft);font-size:13px;margin:2px 0 0}
+.badge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  padding:4px 9px;border-radius:999px;border:1px solid;white-space:nowrap}
+.badge.confirmed{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
+.badge.potential{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.badge.unverified{background:var(--grey-bg);border-color:var(--grey-line);color:var(--grey)}
+.meta{display:flex;gap:18px;flex-wrap:wrap;margin:11px 0 0;font-size:13.5px}
+.meta div{color:var(--soft)}
+.meta b{color:var(--ink)}
+.why{margin:11px 0 0;font-size:14.5px}
+details{margin-top:11px}
+summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--brand-2);
+  list-style:none;user-select:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";display:inline-block;transition:.15s}
+details[open] summary::before{transform:rotate(90deg)}
+details .body{padding:10px 0 0 14px;font-size:14px}
+details h5{margin:12px 0 4px;font-size:12.5px;text-transform:uppercase;
+  letter-spacing:.4px;color:var(--soft)}
+details ul{margin:0;padding-left:20px}
+details li{margin-bottom:4px}
+.verify-note{background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn);
+  border-radius:8px;padding:9px 12px;margin-top:11px;font-size:13.5px}
+.src{margin-top:11px;font-size:13.5px}
+a{color:var(--brand-2);word-break:break-word}
+
+/* deadlines */
+.dl{display:flex;align-items:center;gap:13px;padding:11px 14px;border:1px solid var(--line);
+  border-radius:9px;margin-bottom:8px;background:#fff}
+.dl .when{font-weight:700;font-size:13px;min-width:108px;font-variant-numeric:tabular-nums}
+.dl.urgent{background:var(--red-bg);border-color:var(--red-line)}
+.dl.urgent .when{color:var(--red)}
+.dl.soon{background:var(--warn-bg);border-color:var(--warn-line)}
+.dl.soon .when{color:var(--warn)}
+.dl .what{font-size:14.5px}
+.dl .days{margin-left:auto;font-size:12.5px;color:var(--soft);white-space:nowrap}
+
+/* action plan */
+.step{display:flex;gap:13px;padding:12px 0;border-bottom:1px solid var(--line)}
+.step:last-child{border-bottom:0}
+.step .num{width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;
+  display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}
+.step .task{font-size:14.5px}
+.step .due{font-size:12.5px;color:var(--soft);margin-top:2px}
+
+.srclist{font-size:14px;padding-left:20px;margin:0}
+.srclist li{margin-bottom:6px}
+
+#raw{font-size:15px}
+#raw h3{font-size:16.5px;margin:24px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+#raw h4{font-size:14.5px;margin:18px 0 6px;color:var(--brand)}
+#raw p{margin:0 0 12px}
+#raw ul,#raw ol{margin:0 0 14px;padding-left:22px}
+#raw li{margin-bottom:5px}
+#raw hr{border:0;border-top:1px solid var(--line);margin:20px 0}
+
+.placeholder{color:var(--faint);font-style:italic}
+footer{text-align:center;color:var(--faint);font-size:12.5px;padding-top:10px;line-height:1.7}
+footer strong{color:var(--soft)}
+
+@media(max-width:700px){
+  .grid{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr}
+  h1{font-size:21px}
+  .card{padding:18px}
+  .dl{flex-wrap:wrap}
+  .dl .days{margin-left:0;width:100%}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <div class="logo">ST</div>
+      <div>
+        <h1>ScholarTrack</h1>
+        <p class="tagline">Your AI financial-aid research advisor</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>What do you want to research?</h2>
+    <p class="hint">ScholarTrack searches official sources, then explains what may apply to you, why, what you need, and when it's due.</p>
+    <div class="modes">
+      <button type="button" class="mode active" data-mode="scholarship">Analyze a scholarship</button>
+      <button type="button" class="mode" data-mode="find">Find scholarships</button>
+      <button type="button" class="mode" data-mode="college">College aid</button>
+      <button type="button" class="mode" data-mode="athlete">Athletic + NIL</button>
+      <button type="button" class="mode" data-mode="plan">Build a funding plan</button>
+    </div>
+  </div>
+
+  <form id="form" class="card">
+    <h2>Your information</h2>
+    <p class="hint">Only the first field is required. More detail means better personalization — but never enter your SSN, FAFSA password, or bank details.</p>
+    <div class="grid">
+      <div class="full">
+        <label id="qlabel" for="query">Scholarship name</label>
+        <input id="query" name="query" placeholder="Coca-Cola Scholars Program" required>
+      </div>
+      <div><label>State <span class="optional">— optional</span></label><input name="state" placeholder="Texas"></div>
+      <div><label>College <span class="optional">— optional</span></label><input name="school" placeholder="UT Austin"></div>
+      <div><label>Major <span class="optional">— optional</span></label><input name="major" placeholder="Finance"></div>
+      <div><label>GPA <span class="optional">— optional</span></label><input name="gpa" placeholder="3.8"></div>
+      <div><label>Household income range <span class="optional">— optional</span></label><input name="income_range" placeholder="$75,000–$100,000"></div>
+      <div><label>Household size <span class="optional">— optional</span></label><input name="household_size" type="number" min="1" placeholder="4"></div>
+      <div>
+        <label>Student-athlete? <span class="optional">— optional</span></label>
+        <select name="student_athlete"><option value="false">No</option><option value="true">Yes</option></select>
+      </div>
+      <div><label>Sport <span class="optional">— optional</span></label><input name="sport" placeholder="Track &amp; field"></div>
+      <div class="full"><label>Recruiting status <span class="optional">— optional</span></label><input name="recruiting_status" placeholder="Recruiting / committed / current athlete"></div>
+      <div class="full">
+        <label>Anything else that could affect eligibility? <span class="optional">— optional</span></label>
+        <textarea name="notes" rows="3" placeholder="First-generation student, military family, specific circumstances, etc."></textarea>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="go" type="submit">Research now</button>
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <span id="statusText">Researching…</span>
+        <span class="timer" id="timer"></span>
+      </div>
+    </div>
+  </form>
+
+  <div class="card">
+    <h2>Your ScholarTrack plan</h2>
+    <p class="hint">Every item shows whether it was verified against live sources.</p>
+    <div id="banner"></div>
+    <div id="out"><p class="placeholder">Your personalized plan will appear here.</p></div>
+  </div>
+
+  <footer>
+    <strong>ScholarTrack does not determine your eligibility.</strong><br>
+    It helps you find opportunities to investigate. Always confirm details with the official
+    source and your college's financial-aid office.<br>
+    Never falsify information on the FAFSA.
+  </footer>
+</div>
+
+<script>
+let mode = "scholarship";
+const $ = id => document.getElementById(id);
+const label = $("qlabel"), q = $("query"), loading = $("loading");
+const statusText = $("statusText"), timerEl = $("timer");
+const banner = $("banner"), out = $("out");
+
+const placeholders = {
+  scholarship:["Scholarship name","Coca-Cola Scholars Program"],
+  find:["What kind of scholarships are you looking for?","Texas scholarships for finance students"],
+  college:["College name","University of Texas at Austin"],
+  athlete:["Sport, school, or goal","Track & field scholarships at Texas colleges"],
+  plan:["What's your funding goal?","Maximize funding for UT Austin as a Texas finance student"]
+};
+
+document.querySelectorAll(".mode").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".mode").forEach(x => x.classList.remove("active"));
+  b.classList.add("active");
+  mode = b.dataset.mode;
+  label.textContent = placeholders[mode][0];
+  q.placeholder = placeholders[mode][1];
+});
+
+/* Escape everything from the AI before it touches the page. */
+const esc = s => String(s == null ? "" : s)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+  .replace(/"/g,"&quot;");
+
+const safeUrl = u => (typeof u === "string" && /^https?:\/\//i.test(u)) ? u : null;
+
+const CATEGORIES = [
+  ["federal",     "Federal Aid"],
+  ["state",       "State Aid"],
+  ["university",  "University Aid"],
+  ["scholarship", "Scholarships"],
+  ["athletic",    "Athletic &amp; NIL"]
+];
+
+const CONFIDENCE = {
+  confirmed:  ["confirmed",  "Confirmed"],
+  potential:  ["potential",  "Potentially applicable"],
+  unverified: ["unverified", "Needs verification"]
+};
+
+function list(items, heading){
+  if(!Array.isArray(items)) return "";
+  const clean = items.filter(i => i != null && String(i).trim() !== "");
+  if(!clean.length) return "";
+  return `<h5>${heading}</h5><ul>${clean.map(i => `<li>${esc(i)}</li>`).join("")}</ul>`;
+}
+
+function daysUntil(iso){
+  const d = new Date(iso + "T00:00:00");
+  if(isNaN(d)) return null;
+  return Math.round((d - new Date()) / 86400000);
+}
+
+function oppCard(o){
+  const conf = CONFIDENCE[o.confidence] ? o.confidence : "unverified";
+  const [cls, labelText] = CONFIDENCE[conf];
+  const url = safeUrl(o.source_url);
+
+  const meta = [];
+  if(o.amount) meta.push(`<div>Award: <b>${esc(o.amount)}</b></div>`);
+  const dl = o.deadline_text || o.deadline;
+  if(dl) meta.push(`<div>Deadline: <b>${esc(dl)}</b></div>`);
+
+  const details = list(o.eligibility,"Eligibility")
+                + list(o.required_documents,"Documents you'll need")
+                + list(o.application_steps,"How to apply");
+
+  return `
+  <div class="opp ${cls}">
+    <div class="opp-head">
+      <div>
+        <p class="opp-name">${esc(o.name)}</p>
+        ${o.provider ? `<p class="opp-provider">${esc(o.provider)}</p>` : ""}
+      </div>
+      <span class="badge ${cls}">${labelText}</span>
+    </div>
+    ${meta.length ? `<div class="meta">${meta.join("")}</div>` : ""}
+    ${o.why_it_may_apply ? `<p class="why">${esc(o.why_it_may_apply)}</p>` : ""}
+    ${details ? `<details><summary>Details, documents &amp; how to apply</summary><div class="body">${details}</div></details>` : ""}
+    ${o.verify ? `<div class="verify-note"><b>Verify this:</b> ${esc(o.verify)}</div>` : ""}
+    ${url ? `<div class="src">Source: <a href="${esc(url)}" target="_blank" rel="noopener">${esc(o.source_name || url)}</a></div>` : ""}
+  </div>`;
+}
+
+function renderPlan(data){
+  const plan = data.plan || {};
+  const opps = Array.isArray(plan.opportunities) ? plan.opportunities : [];
+  const steps = Array.isArray(plan.action_plan) ? plan.action_plan : [];
+
+  let html = "";
+
+  // Stat tiles
+  const withDeadline = opps.filter(o => o.deadline || o.deadline_text).length;  // matches Deadlines section
+  html += `<div class="stats">
+    <div class="stat"><div class="n">${opps.length}</div><div class="l">Opportunities found</div></div>
+    <div class="stat"><div class="n">${withDeadline}</div><div class="l">With deadlines</div></div>
+    <div class="stat"><div class="n">${data.sources_searched || 0}</div><div class="l">Sources searched</div></div>
+  </div>`;
+
+  if(plan.summary) html += `<div class="summary">${esc(plan.summary)}</div>`;
+
+  // Categories
+  for(const [key, title] of CATEGORIES){
+    const group = opps.filter(o => o.category === key);
+    if(!group.length) continue;
+    html += `<div class="section"><h3>${title}</h3>${group.map(oppCard).join("")}</div>`;
+  }
+
+  // Anything with an unrecognized category
+  const known = CATEGORIES.map(c => c[0]);
+  const other = opps.filter(o => !known.includes(o.category));
+  if(other.length) html += `<div class="section"><h3>Other Opportunities</h3>${other.map(oppCard).join("")}</div>`;
+
+  // Deadlines: exact dates first (sorted + urgency), then text-only ones.
+  const hasDate = o => o.deadline && daysUntil(o.deadline) !== null;
+  const dated   = opps.filter(hasDate).sort((a,b) => a.deadline.localeCompare(b.deadline));
+  const undated = opps.filter(o => !hasDate(o) && o.deadline_text);
+
+  if(dated.length || undated.length){
+    html += `<div class="section"><h3>Deadlines</h3>`;
+    for(const o of dated){
+      const d = daysUntil(o.deadline);
+      const cls = d < 0 ? "" : d <= 30 ? "urgent" : d <= 90 ? "soon" : "";
+      const note = d < 0 ? "passed — check next cycle"
+                 : d === 0 ? "today"
+                 : `in ${d} day${d === 1 ? "" : "s"}`;
+      html += `<div class="dl ${cls}">
+        <span class="when">${esc(o.deadline)}</span>
+        <span class="what">${esc(o.name)}</span>
+        <span class="days">${note}</span>
+      </div>`;
+    }
+    for(const o of undated){
+      html += `<div class="dl">
+        <span class="when">${esc(o.deadline_text)}</span>
+        <span class="what">${esc(o.name)}</span>
+        <span class="days">confirm exact date</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  // Action plan
+  if(steps.length){
+    html += `<div class="section"><h3>Your Action Plan</h3>`;
+    steps.sort((a,b) => (a.order || 99) - (b.order || 99)).forEach((s,i) => {
+      html += `<div class="step">
+        <div class="num">${i + 1}</div>
+        <div><div class="task">${esc(s.task)}</div>
+        ${s.due ? `<div class="due">Target: ${esc(s.due)}</div>` : ""}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // What to verify
+  if(Array.isArray(plan.verify_notes) && plan.verify_notes.length){
+    html += `<div class="section"><h3>Before You Rely On Any Of This</h3>
+      <ul class="srclist">${plan.verify_notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul></div>`;
+  }
+
+  // Sources
+  const sources = [...new Map(
+    opps.filter(o => safeUrl(o.source_url))
+        .map(o => [o.source_url, o.source_name || o.source_url])
+  )];
+  if(sources.length){
+    html += `<div class="section"><h3>Sources</h3><ul class="srclist">${
+      sources.map(([u,n]) => `<li><a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}</a></li>`).join("")
+    }</ul></div>`;
+  }
+
+  if(!opps.length && !steps.length) return null;   // nothing worth showing
+  return html;
+}
+
+/* Fallback: render the plain-text report if structuring failed. */
+function renderText(md){
+  const lines = esc(md).split("\n");
+  let html = "", ul = false, ol = false;
+  const inline = t => t
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>')
+    .replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>");
+  const close = () => { if(ul){html += "</ul>"; ul = false;} if(ol){html += "</ol>"; ol = false;} };
+  for(const raw of lines){
+    const l = raw.trim();
+    if(!l){ close(); continue; }
+    if(/^[-=_]{3,}$/.test(l)){ close(); html += "<hr>"; continue; }
+    let m;
+    if((m = l.match(/^#{4,}\s+(.*)$/))){ close(); html += "<h4>"+inline(m[1])+"</h4>"; continue; }
+    if((m = l.match(/^#{1,3}\s+(.*)$/))){ close(); html += "<h3>"+inline(m[1])+"</h3>"; continue; }
+    if((m = l.match(/^[-*+]\s+(.*)$/))){ if(ol){html += "</ol>"; ol = false;} if(!ul){html += "<ul>"; ul = true;}
+      html += "<li>"+inline(m[1])+"</li>"; continue; }
+    if((m = l.match(/^\d+[.)]\s+(.*)$/))){ if(ul){html += "</ul>"; ul = false;} if(!ol){html += "<ol>"; ol = true;}
+      html += "<li>"+inline(m[1])+"</li>"; continue; }
+    close(); html += "<p>"+inline(l)+"</p>";
+  }
+  close();
+  return html;
+}
+
+let ticker = null;
+function startTimer(){
+  const t0 = Date.now();
+  timerEl.textContent = "0s";
+  ticker = setInterval(() => {
+    const s = Math.floor((Date.now() - t0) / 1000);
+    timerEl.textContent = s + "s";
+    if(s === 5)  statusText.textContent = "Searching official sources…";
+    if(s === 18) statusText.textContent = "Reading results and checking eligibility…";
+    if(s === 35) statusText.textContent = "Organizing your plan…";
+    if(s === 55) statusText.textContent = "Still working — deep research takes a minute…";
+  }, 1000);
+}
+
+$("form").onsubmit = async e => {
+  e.preventDefault();
+  const btn = e.target.querySelector(".go");
+  btn.disabled = true;
+  loading.classList.add("on");
+  statusText.textContent = "Starting research…";
+  banner.innerHTML = "";
+  out.innerHTML = '<p class="placeholder">Working…</p>';
+  startTimer();
+
+  const d = Object.fromEntries(new FormData(e.target));
+  d.mode = mode;
+  d.household_size = d.household_size ? Number(d.household_size) : null;
+  d.student_athlete = d.student_athlete === "true";
+
+  try{
+    const r = await fetch("/api/plan", {
+      method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(d)
+    });
+    const j = await r.json();
+    if(j.error) throw new Error(j.error);
+
+    banner.innerHTML = j.used_search
+      ? `<div class="banner verified"><strong>Researched against ${j.sources_searched} live sources</strong>
+         Details below came from pages found just now. Confirm anything important with the
+         official provider before you apply — ScholarTrack does not determine eligibility.</div>`
+      : `<div class="banner limited"><strong>Limited mode — not verified</strong>
+         Live web search was unavailable, so no amounts, deadlines or links are shown.
+         This is general guidance only.</div>`;
+
+    const built = renderPlan(j);
+    out.innerHTML = built
+      ? built
+      : `<div id="raw">${renderText(j.report || "No results.")}</div>`;
+
+  }catch(err){
+    banner.innerHTML = `<div class="banner error"><strong>Something went wrong</strong>${esc(err.message)}</div>`;
+    out.innerHTML = '<p class="placeholder">No results. Try again in a moment.</p>';
+  }
+
+  clearInterval(ticker);
+  loading.classList.remove("on");
+  btn.disabled = false;
+};
+</script>
+</body>
+</html>

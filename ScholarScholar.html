@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ScholarTrack — Your AI Financial-Aid Advisor</title>
+<style>
+:root{
+  --ink:#0f172a;
+  --ink-soft:#475569;
+  --ink-faint:#94a3b8;
+  --line:#e2e8f0;
+  --bg:#f1f5f9;
+  --card:#ffffff;
+  --brand:#1e3a8a;
+  --brand-soft:#eef2ff;
+  --ok:#047857;
+  --ok-bg:#ecfdf5;
+  --warn:#b45309;
+  --warn-bg:#fffbeb;
+  --danger:#b91c1c;
+  --danger-bg:#fef2f2;
+  --radius:14px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.6;
+}
+.wrap{max-width:1000px;margin:0 auto;padding:0 20px 60px}
+
+/* ---------- header ---------- */
+header{
+  background:var(--brand);
+  color:#fff;
+  padding:28px 0 24px;
+  margin-bottom:26px;
+}
+header .wrap{padding-bottom:0}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{
+  width:38px;height:38px;border-radius:10px;
+  background:#fff;color:var(--brand);
+  display:grid;place-items:center;
+  font-weight:800;font-size:19px;flex:none;
+}
+h1{margin:0;font-size:25px;letter-spacing:-.4px}
+.tagline{margin:6px 0 0;color:#c7d2fe;font-size:14.5px}
+
+/* ---------- cards ---------- */
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:24px;
+  margin-bottom:20px;
+}
+.card h2{margin:0 0 4px;font-size:17px}
+.card .hint{margin:0 0 18px;color:var(--ink-soft);font-size:14px}
+
+/* ---------- mode tabs ---------- */
+.modes{display:flex;gap:8px;flex-wrap:wrap}
+.mode{
+  background:#f8fafc;color:var(--ink-soft);
+  border:1px solid var(--line);
+  padding:9px 14px;border-radius:999px;
+  cursor:pointer;font-weight:600;font-size:13.5px;
+  font-family:inherit;transition:.15s;
+}
+.mode:hover{border-color:#cbd5e1;color:var(--ink)}
+.mode.active{background:var(--brand);border-color:var(--brand);color:#fff}
+
+/* ---------- form ---------- */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.full{grid-column:1/-1}
+label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-soft);
+  text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+input,select,textarea{
+  width:100%;padding:11px 13px;
+  border:1px solid var(--line);border-radius:9px;
+  font-size:14.5px;font-family:inherit;color:var(--ink);
+  background:#fff;transition:.15s;
+}
+input:focus,select:focus,textarea:focus{
+  outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft);
+}
+textarea{resize:vertical}
+.optional{color:var(--ink-faint);font-weight:500;text-transform:none;letter-spacing:0}
+
+.actions{display:flex;align-items:center;gap:14px;margin-top:20px;flex-wrap:wrap}
+button.go{
+  background:var(--brand);color:#fff;border:0;border-radius:9px;
+  padding:13px 26px;font-weight:700;font-size:15px;
+  cursor:pointer;font-family:inherit;transition:.15s;
+}
+button.go:hover:not(:disabled){background:#1e40af}
+button.go:disabled{background:#94a3b8;cursor:not-allowed}
+#status{color:var(--ink-soft);font-size:14px}
+
+/* ---------- loading ---------- */
+.loading{display:none;align-items:center;gap:11px}
+.loading.on{display:flex}
+.spinner{
+  width:17px;height:17px;flex:none;
+  border:2.5px solid var(--line);border-top-color:var(--brand);
+  border-radius:50%;animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.timer{color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:13px}
+
+/* ---------- result banners ---------- */
+.banner{
+  border-radius:10px;padding:14px 16px;margin-bottom:20px;
+  font-size:14px;border:1px solid;
+}
+.banner strong{display:block;margin-bottom:3px;font-size:14.5px}
+.banner.verified{background:var(--ok-bg);border-color:#a7f3d0;color:var(--ok)}
+.banner.limited{background:var(--warn-bg);border-color:#fde68a;color:var(--warn)}
+.banner.error{background:var(--danger-bg);border-color:#fecaca;color:var(--danger)}
+
+/* ---------- report body ---------- */
+#report{font-size:15px;color:var(--ink)}
+#report .placeholder{color:var(--ink-faint);font-style:italic}
+#report h3{font-size:16.5px;margin:26px 0 8px;padding-bottom:6px;
+  border-bottom:1px solid var(--line)}
+#report h4{font-size:14.5px;margin:20px 0 6px;color:var(--brand)}
+#report p{margin:0 0 12px}
+#report ul,#report ol{margin:0 0 14px;padding-left:22px}
+#report li{margin-bottom:5px}
+#report a{color:var(--brand);text-decoration:underline;word-break:break-word}
+#report code{background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:13.5px}
+#report hr{border:0;border-top:1px solid var(--line);margin:22px 0}
+#report .pre{white-space:pre-wrap;font-family:inherit}
+
+/* ---------- footer ---------- */
+footer{
+  text-align:center;color:var(--ink-faint);font-size:12.5px;
+  padding-top:10px;line-height:1.7;
+}
+footer strong{color:var(--ink-soft)}
+
+@media(max-width:700px){
+  .grid{grid-template-columns:1fr}
+  h1{font-size:21px}
+  .card{padding:18px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <div class="logo">ST</div>
+      <div>
+        <h1>ScholarTrack</h1>
+        <p class="tagline">Your AI financial-aid research advisor</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>What do you want to research?</h2>
+    <p class="hint">ScholarTrack researches financial-aid opportunities and explains why they may apply to you, what you need, and when it's due.</p>
+    <div class="modes">
+      <button type="button" class="mode active" data-mode="scholarship">Analyze a scholarship</button>
+      <button type="button" class="mode" data-mode="find">Find scholarships</button>
+      <button type="button" class="mode" data-mode="college">College aid</button>
+      <button type="button" class="mode" data-mode="athlete">Athletic + NIL</button>
+      <button type="button" class="mode" data-mode="plan">Build a funding plan</button>
+    </div>
+  </div>
+
+  <form id="form" class="card">
+    <h2>Your information</h2>
+    <p class="hint">Only the first field is required. The more you share, the more personalized the results — but never enter your SSN, FAFSA password, or bank details.</p>
+
+    <div class="grid">
+      <div class="full">
+        <label id="qlabel" for="query">Scholarship name</label>
+        <input id="query" name="query" placeholder="Coca-Cola Scholars Program" required>
+      </div>
+      <div><label>State <span class="optional">— optional</span></label><input name="state" placeholder="Texas"></div>
+      <div><label>College <span class="optional">— optional</span></label><input name="school" placeholder="UT Austin"></div>
+      <div><label>Major <span class="optional">— optional</span></label><input name="major" placeholder="Finance"></div>
+      <div><label>GPA <span class="optional">— optional</span></label><input name="gpa" placeholder="3.8"></div>
+      <div><label>Household income range <span class="optional">— optional</span></label><input name="income_range" placeholder="$75,000–$100,000"></div>
+      <div><label>Household size <span class="optional">— optional</span></label><input name="household_size" type="number" min="1" placeholder="4"></div>
+      <div>
+        <label>Student-athlete? <span class="optional">— optional</span></label>
+        <select name="student_athlete"><option value="false">No</option><option value="true">Yes</option></select>
+      </div>
+      <div><label>Sport <span class="optional">— optional</span></label><input name="sport" placeholder="Track &amp; field"></div>
+      <div class="full"><label>Recruiting status <span class="optional">— optional</span></label><input name="recruiting_status" placeholder="Recruiting / committed / current athlete"></div>
+      <div class="full">
+        <label>Anything else that could affect eligibility? <span class="optional">— optional</span></label>
+        <textarea name="notes" rows="3" placeholder="First-generation student, military family, specific circumstances, etc."></textarea>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="go" type="submit">Research now</button>
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <span id="status">Researching…</span>
+        <span class="timer" id="timer"></span>
+      </div>
+    </div>
+  </form>
+
+  <div class="card">
+    <h2>Your ScholarTrack plan</h2>
+    <p class="hint">Every result tells you whether it was verified against live sources.</p>
+    <div id="banner"></div>
+    <div id="report"><p class="placeholder">Your results will appear here.</p></div>
+  </div>
+
+  <footer>
+    <strong>ScholarTrack does not determine your eligibility.</strong><br>
+    It helps you find opportunities to investigate. Always confirm details with the official
+    source and your college's financial-aid office.<br>
+    Never falsify information on the FAFSA.
+  </footer>
+
+</div>
+
+<script>
+let mode = "scholarship";
+const label  = document.getElementById("qlabel");
+const q      = document.getElementById("query");
+const loading= document.getElementById("loading");
+const statusEl=document.getElementById("status");
+const timerEl= document.getElementById("timer");
+const banner = document.getElementById("banner");
+const report = document.getElementById("report");
+
+const placeholders = {
+  scholarship:["Scholarship name","Coca-Cola Scholars Program"],
+  find:["What kind of scholarships are you looking for?","Texas scholarships for finance students"],
+  college:["College name","University of Texas at Austin"],
+  athlete:["Sport, school, or goal","Track & field scholarships at Texas colleges"],
+  plan:["What's your funding goal?","Maximize funding for UT Austin as a Texas finance student"]
+};
+
+document.querySelectorAll(".mode").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll(".mode").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    mode = b.dataset.mode;
+    label.textContent = placeholders[mode][0];
+    q.placeholder     = placeholders[mode][1];
+  };
+});
+
+/* Escape first, so nothing from the AI can inject HTML into the page. */
+function esc(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+/* Small markdown-to-HTML converter: headings, bold, italic, links, lists, rules. */
+function render(md){
+  const lines = esc(md).split("\n");
+  let html = "", inUl = false, inOl = false;
+
+  const inline = t => t
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>')
+    .replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
+    .replace(/(^|\W)\*([^*\n]+)\*(\W|$)/g,"$1<em>$2</em>$3")
+    .replace(/`([^`]+)`/g,"<code>$1</code>");
+
+  const closeLists = () => {
+    if(inUl){ html += "</ul>"; inUl = false; }
+    if(inOl){ html += "</ol>"; inOl = false; }
+  };
+
+  for(let raw of lines){
+    const line = raw.trim();
+
+    if(!line){ closeLists(); continue; }
+
+    if(/^[-=_]{3,}$/.test(line)){ closeLists(); html += "<hr>"; continue; }
+
+    let m;
+    if((m = line.match(/^#{4,}\s+(.*)$/))){ closeLists(); html += "<h4>"+inline(m[1])+"</h4>"; continue; }
+    if((m = line.match(/^#{1,3}\s+(.*)$/))){ closeLists(); html += "<h3>"+inline(m[1])+"</h3>"; continue; }
+
+    if((m = line.match(/^[-*+]\s+(.*)$/))){
+      if(inOl){ html += "</ol>"; inOl = false; }
+      if(!inUl){ html += "<ul>"; inUl = true; }
+      html += "<li>"+inline(m[1])+"</li>"; continue;
+    }
+    if((m = line.match(/^\d+[.)]\s+(.*)$/))){
+      if(inUl){ html += "</ul>"; inUl = false; }
+      if(!inOl){ html += "<ol>"; inOl = true; }
+      html += "<li>"+inline(m[1])+"</li>"; continue;
+    }
+
+    closeLists();
+    html += "<p>"+inline(line)+"</p>";
+  }
+  closeLists();
+  return html;
+}
+
+/* Strip the plain-text banner the server prepends; we show a styled one instead. */
+function stripServerBanner(text){
+  return text
+    .replace(/^=+[\s\S]*?=+\s*/m, "")
+    .replace(/^LIMITED MODE[^\n]*\n?/m, "")
+    .replace(/^NOTE: Live web search[\s\S]*?\n\n/m, "")
+    .trim();
+}
+
+let ticker = null;
+function startTimer(){
+  const t0 = Date.now();
+  timerEl.textContent = "0s";
+  ticker = setInterval(() => {
+    const s = Math.floor((Date.now() - t0) / 1000);
+    timerEl.textContent = s + "s";
+    if(s === 8)  statusEl.textContent = "Searching official sources…";
+    if(s === 20) statusEl.textContent = "Analyzing eligibility…";
+    if(s === 40) statusEl.textContent = "Still working — complex research takes a minute…";
+  }, 1000);
+}
+function stopTimer(){ clearInterval(ticker); ticker = null; }
+
+document.getElementById("form").onsubmit = async e => {
+  e.preventDefault();
+  const btn = e.target.querySelector(".go");
+
+  btn.disabled = true;
+  loading.classList.add("on");
+  statusEl.textContent = "Starting research…";
+  banner.innerHTML = "";
+  report.innerHTML = '<p class="placeholder">Working…</p>';
+  startTimer();
+
+  const d = Object.fromEntries(new FormData(e.target));
+  d.mode = mode;
+  d.household_size  = d.household_size ? Number(d.household_size) : null;
+  d.student_athlete = d.student_athlete === "true";
+
+  try{
+    const r = await fetch("/api/research", {
+      method : "POST",
+      headers: { "Content-Type": "application/json" },
+      body   : JSON.stringify(d)
+    });
+    const j = await r.json();
+    if(j.error) throw new Error(j.error);
+
+    if(j.used_search){
+      banner.innerHTML =
+        '<div class="banner verified"><strong>Researched against live sources</strong>'
+        + 'Details below were checked against current web sources. Still confirm anything '
+        + 'important with the official provider before you apply.</div>';
+    }else{
+      banner.innerHTML =
+        '<div class="banner limited"><strong>Limited mode — not verified</strong>'
+        + 'Live web search was unavailable, so no amounts, deadlines or links are shown. '
+        + 'This is general guidance only — look up current details yourself.</div>';
+    }
+
+    report.innerHTML = render(stripServerBanner(j.report));
+
+  }catch(err){
+    banner.innerHTML =
+      '<div class="banner error"><strong>Something went wrong</strong>'
+      + esc(err.message) + '</div>';
+    report.innerHTML = '<p class="placeholder">No results. Try again in a moment.</p>';
+  }
+
+  stopTimer();
+  loading.classList.remove("on");
+  btn.disabled = false;
+};
+</script>
+</body>
+</html>

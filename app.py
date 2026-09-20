@@ -61,6 +61,14 @@ KNOWN/PUBLISHED AID, POTENTIAL AID, ACTION ITEMS, DEADLINES, and SOURCES.
 Do not promise a total award or calculate an official SAI.
 """
 
+NO_SEARCH_WARNING = (
+    "NOTE: Live web search was unavailable for this request, so nothing below "
+    "was verified against current official sources. Treat every program name, "
+    "amount and deadline as UNVERIFIED and confirm it directly with the "
+    "official website and your college's financial-aid office.\n\n"
+    "----------------------------------------\n\n"
+)
+
 def prompt(d: RequestData):
     profile = f"""
 Student profile:
@@ -87,6 +95,17 @@ Notes: {d.notes}
         task = f"Build a personalized college funding plan for: {d.query}"
     return task + "\n\n" + profile
 
+def ask_gemini(client, model, text, use_search):
+    """One call to Gemini. use_search turns Google Search on or off."""
+    if use_search:
+        config = types.GenerateContentConfig(
+            system_instruction=SYSTEM,
+            tools=[types.Tool(google_search=types.GoogleSearch())],
+        )
+    else:
+        config = types.GenerateContentConfig(system_instruction=SYSTEM)
+    return client.models.generate_content(model=model, contents=text, config=config)
+
 @app.get("/")
 def home():
     return FileResponse("index.html")
@@ -95,29 +114,32 @@ def home():
 def research(data: RequestData):
     key = os.getenv("GOOGLE_API_KEY")
     if not key:
-        return JSONResponse(
-            status_code=500,
-            content={"error": "GOOGLE_API_KEY is not set."}
-        )
+        return JSONResponse(status_code=500, content={"error": "GOOGLE_API_KEY is not set."})
+
+    model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+    text = prompt(data)
+
     try:
         client = genai.Client(api_key=key)
-        response = client.models.generate_content(
-            model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
-            contents=prompt(data),
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM,
-                tools=[types.Tool(google_search=types.GoogleSearch())],
-            ),
-        )
+
+        # First choice: with live Google Search.
+        try:
+            response = ask_gemini(client, model, text, use_search=True)
+            used_search = True
+        except Exception as search_error:
+            # Search quota blocked us. Fall back to no search rather than failing.
+            print(f"Search unavailable, retrying without it: {search_error}")
+            response = ask_gemini(client, model, text, use_search=False)
+            used_search = False
 
         report = response.text
         if not report:
-            return JSONResponse(
-                status_code=502,
-                content={"error": "Gemini returned no text output."}
-            )
+            return JSONResponse(status_code=502, content={"error": "Gemini returned no text output."})
 
-        return {"report": report}
+        if not used_search:
+            report = NO_SEARCH_WARNING + report
+
+        return {"report": report, "used_search": used_search}
 
     except Exception as e:
         return JSONResponse(

@@ -24,6 +24,7 @@ class RequestData(BaseModel):
     recruiting_status: Optional[str] = None
     notes: Optional[str] = None
 
+# Used when live web search IS working.
 SYSTEM = """
 You are a current-information college funding research assistant.
 
@@ -35,6 +36,9 @@ financial-aid pages and StudentAid.gov. For state programs, use the official sta
 Never invent a scholarship, amount, deadline, eligibility requirement, NIL opportunity,
 or source. Never recommend falsifying or hiding FAFSA information. Never request SSNs,
 FAFSA passwords, tax-account credentials, or bank credentials.
+
+Only cite a URL that you actually retrieved through web search in this request.
+If you did not retrieve a page, do not cite anything.
 
 Clearly distinguish:
 - Confirmed official facts
@@ -61,12 +65,48 @@ KNOWN/PUBLISHED AID, POTENTIAL AID, ACTION ITEMS, DEADLINES, and SOURCES.
 Do not promise a total award or calculate an official SAI.
 """
 
+# Used when live web search is NOT available. Much stricter.
+NO_SEARCH_SYSTEM = """
+You are a college funding assistant running in LIMITED MODE.
+
+You have NO web access for this request. You cannot verify anything. Because
+financial-aid details change every year, you must not present remembered details
+as fact.
+
+HARD RULES - these override any other instruction:
+1. Do NOT output any URL, web address, or domain name. None. Not even a real one.
+2. Do NOT use citation markers such as [1], (source), or "Official Source:".
+3. Do NOT state any specific dollar amount, award size, deadline date, GPA cutoff,
+   income threshold, or number of recipients.
+4. Do NOT write "based on official sources", "confirmed", or similar. Nothing here
+   is confirmed.
+5. Do NOT invent program names. You may name only large, long-running programs you
+   are confident exist, and only in general terms.
+
+WHAT TO DO INSTEAD:
+- Explain what CATEGORY of aid the student is asking about and how that category
+  generally works.
+- Explain what generally determines eligibility, in words, without numbers.
+- List the documents students generally need.
+- List the specific questions the student should ask their college's financial-aid
+  office, and which official organizations they should look up themselves.
+- Give next steps that are about FINDING the current information, not about the
+  information itself.
+
+Never recommend falsifying or hiding FAFSA information. Never request SSNs, FAFSA
+passwords, tax-account credentials, or bank credentials.
+
+Begin your response with this exact line:
+LIMITED MODE - general guidance only, nothing below is verified or current.
+"""
+
 NO_SEARCH_WARNING = (
-    "NOTE: Live web search was unavailable for this request, so nothing below "
-    "was verified against current official sources. Treat every program name, "
-    "amount and deadline as UNVERIFIED and confirm it directly with the "
-    "official website and your college's financial-aid office.\n\n"
-    "----------------------------------------\n\n"
+    "=========================================\n"
+    "  LIMITED MODE - NOT VERIFIED\n"
+    "  Live web search was unavailable.\n"
+    "  No amounts, deadlines or links are shown\n"
+    "  because they could not be checked.\n"
+    "=========================================\n\n"
 )
 
 def prompt(d: RequestData):
@@ -96,14 +136,14 @@ Notes: {d.notes}
     return task + "\n\n" + profile
 
 def ask_gemini(client, model, text, use_search):
-    """One call to Gemini. use_search turns Google Search on or off."""
+    """One call to Gemini. Search on = normal rules. Search off = limited mode."""
     if use_search:
         config = types.GenerateContentConfig(
             system_instruction=SYSTEM,
             tools=[types.Tool(google_search=types.GoogleSearch())],
         )
     else:
-        config = types.GenerateContentConfig(system_instruction=SYSTEM)
+        config = types.GenerateContentConfig(system_instruction=NO_SEARCH_SYSTEM)
     return client.models.generate_content(model=model, contents=text, config=config)
 
 @app.get("/")
@@ -116,19 +156,17 @@ def research(data: RequestData):
     if not key:
         return JSONResponse(status_code=500, content={"error": "GOOGLE_API_KEY is not set."})
 
-    model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
     text = prompt(data)
 
     try:
         client = genai.Client(api_key=key)
 
-        # First choice: with live Google Search.
         try:
             response = ask_gemini(client, model, text, use_search=True)
             used_search = True
         except Exception as search_error:
-            # Search quota blocked us. Fall back to no search rather than failing.
-            print(f"Search unavailable, retrying without it: {search_error}")
+            print(f"Search unavailable, retrying in limited mode: {search_error}")
             response = ask_gemini(client, model, text, use_search=False)
             used_search = False
 

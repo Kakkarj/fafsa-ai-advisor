@@ -4,9 +4,10 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from openai import OpenAI
+from google import genai
+from google.genai import types
 
-app = FastAPI(title="FAFSA & Scholarship AI Advisor")
+app = FastAPI(title="ScholarTrack")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 class RequestData(BaseModel):
@@ -92,23 +93,28 @@ def home():
 
 @app.post("/api/research")
 def research(data: RequestData):
-    key = os.getenv("OPENAI_API_KEY")
+    key = os.getenv("GOOGLE_API_KEY")
     if not key:
-        return {"error": "OPENAI_API_KEY is not set."}
+        return JSONResponse(
+            status_code=500,
+            content={"error": "GOOGLE_API_KEY is not set."}
+        )
     try:
-        client = OpenAI(api_key=key)
-        r = client.responses.create(
-            model=os.getenv("OPENAI_MODEL", "gpt-5.6-luna"),
-            tools=[{"type": "web_search"}],
-            instructions=SYSTEM,
-            input=prompt(data),
+        client = genai.Client(api_key=key)
+        response = client.models.generate_content(
+            model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+            contents=prompt(data),
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM,
+                tools=[types.Tool(google_search=types.GoogleSearch())],
+            ),
         )
 
-        report = r.output_text
+        report = response.text
         if not report:
             return JSONResponse(
                 status_code=502,
-                content={"error": "OpenAI returned no text output."}
+                content={"error": "Gemini returned no text output."}
             )
 
         return {"report": report}
